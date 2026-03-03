@@ -1,4 +1,5 @@
-import { RouteGeneticAlgorithm, GAParams, Individual } from '../utils/geneticAlgorithm';
+import { RouteGeneticAlgorithm } from '../utils/geneticAlgorithm';
+import type { GAParams } from '../utils/geneticAlgorithm';
 
 self.onmessage = function (e) {
     const { startCity, endCity, params } = e.data as { startCity: string, endCity: string, params: GAParams };

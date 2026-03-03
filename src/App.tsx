@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import MapView from './components/MapView';
 import RightPanel from './components/RightPanel';
 import { CITIES } from './data/turkeyGraph';
-import type { GAParams } from './workers/gaWorker';
+import type { GAParams } from './utils/geneticAlgorithm';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -77,7 +77,7 @@ function App() {
   const playbackTimerRef = useRef<number | null>(null);
 
   const handleParamChange = useCallback((param: keyof GAParams, value: number) => {
-    setGaParams(prev => ({ ...prev, [param]: value }));
+    setGaParams((prev: GAParams) => ({ ...prev, [param]: value }));
   }, []);
 
   const handleStartSimulation = useCallback(() => {

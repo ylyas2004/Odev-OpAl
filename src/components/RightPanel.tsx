@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { GAParams } from '../workers/gaWorker';
+import type { GAParams } from '../utils/geneticAlgorithm';
 
 interface RightPanelProps {
     gaParams: GAParams;
