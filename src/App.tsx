@@ -3,6 +3,7 @@ import MapView from './components/MapView';
 import RightPanel from './components/RightPanel';
 import { CITIES } from './data/turkeyGraph';
 import type { GAParams } from './utils/geneticAlgorithm';
+import type { SAParams } from './utils/simulatedAnnealing';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -15,8 +16,18 @@ const DEFAULT_PARAMS: GAParams = {
   earlyStopGenerations: 60,
 };
 
+const DEFAULT_SA_PARAMS: SAParams = {
+  initialTemperature: 1000,
+  minTemperature: 0.1,
+  coolingRate: 0.99,
+  maxIterations: 1000,
+  iterationsPerTemp: 20,
+  coolingSchedule: 'geometric',
+};
+
 interface ResultState {
   generation: number;
+  temperature?: number;
   bestDistance: number;
   bestPath: string[];
   status: 'idle' | 'running' | 'done';
@@ -67,7 +78,9 @@ function CitySelect({
 function App() {
   const [startCity, setStartCity] = useState<string | null>(null);
   const [endCity, setEndCity] = useState<string | null>(null);
+  const [algorithm, setAlgorithm] = useState<'ga' | 'sa'>('ga');
   const [gaParams, setGaParams] = useState<GAParams>(DEFAULT_PARAMS);
+  const [saParams, setSaParams] = useState<SAParams>(DEFAULT_SA_PARAMS);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ResultState>(INITIAL_RESULTS);
   const [trialPath, setTrialPath] = useState<string[]>([]);
@@ -76,8 +89,12 @@ function App() {
   const workerRef = useRef<Worker | null>(null);
   const playbackTimerRef = useRef<number | null>(null);
 
-  const handleParamChange = useCallback((param: keyof GAParams, value: number) => {
+  const handleGaParamChange = useCallback((param: keyof GAParams, value: number) => {
     setGaParams((prev: GAParams) => ({ ...prev, [param]: value }));
+  }, []);
+
+  const handleSaParamChange = useCallback((param: keyof SAParams, value: number | string) => {
+    setSaParams((prev: SAParams) => ({ ...prev, [param]: value as never }));
   }, []);
 
   const handleStartSimulation = useCallback(() => {
@@ -96,7 +113,10 @@ function App() {
     setTrialPath([]);
     setResults({ ...INITIAL_RESULTS, status: 'running' });
 
-    const worker = new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+    const workerUrl = algorithm === 'sa'
+      ? new URL('./workers/saWorker.ts', import.meta.url)
+      : new URL('./workers/gaWorker.ts', import.meta.url);
+    const worker = new Worker(workerUrl, { type: 'module' });
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent<any>) => {
@@ -109,16 +129,30 @@ function App() {
         }
 
         const totalDuration = simTimeSeconds * 1000;
-        const frameDelay = totalDuration / frames.length;
-        let frameIdx = 0;
+        const targetFps = 30; // Cap at 30 FPS to prevent SVG and React state lockups
+        const targetDelay = 1000 / targetFps;
+
+        let actualDelay = totalDuration / frames.length;
+        let frameStep = 1;
+
+        if (actualDelay < targetDelay) {
+          actualDelay = targetDelay;
+          frameStep = frames.length / (totalDuration / targetDelay);
+        }
+
+        let currentVirtualFrame = 0;
 
         playbackTimerRef.current = window.setInterval(() => {
+          currentVirtualFrame += frameStep;
+          const frameIdx = Math.floor(currentVirtualFrame);
+
           if (frameIdx >= frames.length) {
             if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
             setIsRunning(false);
             const finalFrame = frames[frames.length - 1];
             setResults({
               generation: finalFrame.generation,
+              temperature: finalFrame.temperature,
               bestDistance: finalFrame.bestDistance,
               bestPath: finalFrame.bestPath,
               status: 'done'
@@ -130,12 +164,12 @@ function App() {
             setResults(prev => ({
               ...prev,
               generation: frame.generation,
+              temperature: frame.temperature,
               bestDistance: frame.bestDistance,
-              bestPath: frame.bestPath, // Concurrently best green line if you want, but actually MapView will prefer bestPath as Green. Red is trial.
+              bestPath: frame.bestPath,
             }));
-            frameIdx++;
           }
-        }, frameDelay);
+        }, actualDelay);
       }
     };
 
@@ -149,9 +183,9 @@ function App() {
       type: 'start',
       startCity,
       endCity,
-      params: gaParams,
+      params: algorithm === 'sa' ? saParams : gaParams,
     });
-  }, [startCity, endCity, gaParams, simTimeSeconds]);
+  }, [startCity, endCity, algorithm, gaParams, saParams, simTimeSeconds]);
 
   const handleStopSimulation = useCallback(() => {
     if (workerRef.current) {
@@ -231,8 +265,12 @@ function App() {
           {results.status === 'done' && <span className="status-badge done" style={{ marginRight: '12px' }}>✅ Tamamlandı</span>}
 
           <div className="header-distance">
-            Nesil: <span>{results.generation}</span> |
-            Mesafe: <span>{results.bestDistance !== Infinity ? `${Math.round(results.bestDistance)} km` : '∞'}</span>
+            {algorithm === 'sa' ? (
+              <>Sıcaklık: <span>{results.temperature !== undefined ? `${results.temperature.toFixed(2)}°` : `${saParams.initialTemperature}°`}</span> |</>
+            ) : (
+              <>Nesil: <span>{results.generation}</span> |</>
+            )}
+            &nbsp;Mesafe: <span>{results.bestDistance !== Infinity ? `${Math.round(results.bestDistance)} km` : '∞'}</span>
           </div>
         </div>
       </header>
@@ -282,9 +320,15 @@ function App() {
         </div>
 
         <RightPanel
+          algorithm={algorithm}
+          onAlgorithmChange={setAlgorithm}
           gaParams={gaParams}
-          onParamChange={handleParamChange}
+          onGaParamChange={handleGaParamChange}
+          saParams={saParams}
+          onSaParamChange={handleSaParamChange}
           isRunning={isRunning}
+          currentGeneration={results.generation}
+          currentTemperature={results.temperature}
         />
       </div>
     </div>

@@ -437,7 +437,7 @@ body {
 
 .map-hint {
   position: absolute;
-  top: 24px;
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
@@ -644,11 +644,11 @@ body {
 
   0%,
   100% {
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 
   50% {
-    transform: translate(-50%, -4px);
+    transform: translateY(-4px);
   }
 }
 

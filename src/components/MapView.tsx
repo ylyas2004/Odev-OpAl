@@ -68,12 +68,7 @@ const MapView: React.FC<MapViewProps> = ({
     }, [currentPath.join(',')]);
 
     useEffect(() => {
-        if (isRunning) {
-            setDetailedBestCoords(null);
-            return;
-        }
-
-        if (!isRunning && bestPath.length > 1) {
+        if (bestPath.length > 1) {
             let fullGeometry: [number, number][] = [];
 
             for (let i = 0; i < bestPath.length - 1; i++) {
@@ -112,7 +107,7 @@ const MapView: React.FC<MapViewProps> = ({
         } else {
             setDetailedBestCoords(null);
         }
-    }, [isRunning, bestPath.join(',')]);
+    }, [bestPath.join(',')]);
 
     const getCityColor = (cityId: string) => {
         if (cityId === startCity) return '#14B8A6'; // Teal
@@ -206,10 +201,10 @@ const MapView: React.FC<MapViewProps> = ({
                 <Polyline
                     positions={detailedBestCoords}
                     pathOptions={{
-                        color: isRunning ? '#f59e0b' : '#10b981',
-                        weight: isRunning ? 3.5 : 5,
-                        opacity: isRunning ? 0.9 : 1,
-                        dashArray: isRunning ? undefined : '10 8',
+                        color: '#10b981', // Emerald green
+                        weight: isRunning ? 2 : 5,
+                        opacity: isRunning ? 0.5 : 1,
+                        dashArray: isRunning ? '8 5' : '10 8',
                     }}
                 />
             )}
