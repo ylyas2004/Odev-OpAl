@@ -118,7 +118,7 @@ function CoolingGraph({ params, isRunning, currentStep, currentTemp }: { params:
                     {formulaJsx}
                 </span>
             </div>
-            <svg width="100%" height="auto" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+            <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible', height: 'auto' }}>
                 {/* Axes */}
                 <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
                 <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.2)" strokeWidth="1" />

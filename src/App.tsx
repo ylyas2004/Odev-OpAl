@@ -113,10 +113,10 @@ function App() {
     setTrialPath([]);
     setResults({ ...INITIAL_RESULTS, status: 'running' });
 
-    const workerUrl = algorithm === 'sa'
-      ? new URL('./workers/saWorker.ts', import.meta.url)
-      : new URL('./workers/gaWorker.ts', import.meta.url);
-    const worker = new Worker(workerUrl, { type: 'module' });
+    const worker = algorithm === 'sa'
+      ? new Worker(new URL('./workers/saWorker.ts', import.meta.url), { type: 'module' })
+      : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent<any>) => {
