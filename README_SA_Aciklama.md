@@ -1,6 +1,6 @@
 # Benzetimli Tavlama (Simulated Annealing) Algoritması Kod Açıklaması
 
-Bu doküman, `src/utils/simulatedAnnealing.ts` dosyasındaki Benzetimli Tavlama (Simulated Annealing) algoritmasının çalışma mantığını sınıfa ve hocaya sunarken kullanabileceğiniz teknik bir rehberdir.
+Bu doküman, `src/utils/simulatedAnnealing.ts` dosyasındaki Benzetimli Tavlama (Simulated Annealing) algoritmasının çalışma mantığının anlatımı.
 
 ## 1. Algoritmaya Genel Bakış
 Benzetimli Tavlama, metalurji bilimindeki "tavlama" (annealing - metali yavaş yavaş soğutarak en sağlam atomik dizilime ulaştırma) işleminden esinlenen sezgisel (heuristic) bir optimizasyon algoritmasıdır. Temel amacı, sistemde karşılaşılan **yerel minimumlara (local minima) takılmadan global minimumu bulaşıp bulabilmektir** (Bizim uygulamamızda: Haritadaki en kısa rotayı bulmak). 
