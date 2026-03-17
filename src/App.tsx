@@ -4,6 +4,7 @@ import RightPanel from './components/RightPanel';
 import { CITIES } from './data/turkeyGraph';
 import type { GAParams } from './utils/geneticAlgorithm';
 import type { SAParams } from './utils/simulatedAnnealing';
+import type { TabuParams } from './utils/tabuSearch';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -23,6 +24,13 @@ const DEFAULT_SA_PARAMS: SAParams = {
   maxIterations: 1000,
   iterationsPerTemp: 20,
   coolingSchedule: 'geometric',
+};
+
+const DEFAULT_TABU_PARAMS: TabuParams = {
+  tabuSize: 10,
+  maxIterations: 500,
+  neighborhoodSize: 20,
+  maxNoImprove: 100,
 };
 
 interface ResultState {
@@ -78,9 +86,10 @@ function CitySelect({
 function App() {
   const [startCity, setStartCity] = useState<string | null>(null);
   const [endCity, setEndCity] = useState<string | null>(null);
-  const [algorithm, setAlgorithm] = useState<'ga' | 'sa'>('ga');
+  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu'>('ga');
   const [gaParams, setGaParams] = useState<GAParams>(DEFAULT_PARAMS);
   const [saParams, setSaParams] = useState<SAParams>(DEFAULT_SA_PARAMS);
+  const [tabuParams, setTabuParams] = useState<TabuParams>(DEFAULT_TABU_PARAMS);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ResultState>(INITIAL_RESULTS);
   const [trialPath, setTrialPath] = useState<string[]>([]);
@@ -95,6 +104,10 @@ function App() {
 
   const handleSaParamChange = useCallback((param: keyof SAParams, value: number | string) => {
     setSaParams((prev: SAParams) => ({ ...prev, [param]: value as never }));
+  }, []);
+
+  const handleTabuParamChange = useCallback((param: keyof TabuParams, value: number) => {
+    setTabuParams((prev: TabuParams) => ({ ...prev, [param]: value }));
   }, []);
 
   const handleStartSimulation = useCallback(() => {
@@ -115,7 +128,9 @@ function App() {
 
     const worker = algorithm === 'sa'
       ? new Worker(new URL('./workers/saWorker.ts', import.meta.url), { type: 'module' })
-      : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+      : algorithm === 'tabu'
+        ? new Worker(new URL('./workers/tabuWorker.ts', import.meta.url), { type: 'module' })
+        : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
 
     workerRef.current = worker;
 
@@ -183,9 +198,9 @@ function App() {
       type: 'start',
       startCity,
       endCity,
-      params: algorithm === 'sa' ? saParams : gaParams,
+      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : gaParams,
     });
-  }, [startCity, endCity, algorithm, gaParams, saParams, simTimeSeconds]);
+  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, simTimeSeconds]);
 
   const handleStopSimulation = useCallback(() => {
     if (workerRef.current) {
@@ -268,7 +283,7 @@ function App() {
             {algorithm === 'sa' ? (
               <>Sıcaklık: <span>{results.temperature !== undefined ? `${results.temperature.toFixed(2)}°` : `${saParams.initialTemperature}°`}</span> |</>
             ) : (
-              <>Nesil: <span>{results.generation}</span> |</>
+              <>İterasyon: <span>{results.generation}</span> |</>
             )}
             &nbsp;Mesafe: <span>{results.bestDistance !== Infinity ? `${Math.round(results.bestDistance)} km` : '∞'}</span>
           </div>
@@ -326,6 +341,8 @@ function App() {
           onGaParamChange={handleGaParamChange}
           saParams={saParams}
           onSaParamChange={handleSaParamChange}
+          tabuParams={tabuParams}
+          onTabuParamChange={handleTabuParamChange}
           isRunning={isRunning}
           currentGeneration={results.generation}
           currentTemperature={results.temperature}
