@@ -5,6 +5,7 @@ import { CITIES } from './data/turkeyGraph';
 import type { GAParams } from './utils/geneticAlgorithm';
 import type { SAParams } from './utils/simulatedAnnealing';
 import type { TabuParams } from './utils/tabuSearch';
+import type { PSOParams } from './utils/particleSwarm';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -30,6 +31,19 @@ const DEFAULT_TABU_PARAMS: TabuParams = {
   tabuSize: 10,
   maxIterations: 500,
   neighborhoodSize: 20,
+  maxNoImprove: 100,
+};
+
+const DEFAULT_PSO_PARAMS: PSOParams = {
+  swarmSize: 40,
+  maxIterations: 500,
+  inertiaWeight: 0.7,
+  cognitiveCoeff: 1.5,
+  socialCoeff: 1.5,
+  maxSwapsPerIter: 4,
+  mutationRate: 0.1,
+  useLocalBest: false,
+  neighborhoodSize: 3,
   maxNoImprove: 100,
 };
 
@@ -86,10 +100,11 @@ function CitySelect({
 function App() {
   const [startCity, setStartCity] = useState<string | null>(null);
   const [endCity, setEndCity] = useState<string | null>(null);
-  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu'>('ga');
+  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso'>('ga');
   const [gaParams, setGaParams] = useState<GAParams>(DEFAULT_PARAMS);
   const [saParams, setSaParams] = useState<SAParams>(DEFAULT_SA_PARAMS);
   const [tabuParams, setTabuParams] = useState<TabuParams>(DEFAULT_TABU_PARAMS);
+  const [psoParams, setPsoParams] = useState<PSOParams>(DEFAULT_PSO_PARAMS);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ResultState>(INITIAL_RESULTS);
   const [trialPath, setTrialPath] = useState<string[]>([]);
@@ -108,6 +123,10 @@ function App() {
 
   const handleTabuParamChange = useCallback((param: keyof TabuParams, value: number) => {
     setTabuParams((prev: TabuParams) => ({ ...prev, [param]: value }));
+  }, []);
+
+  const handlePsoParamChange = useCallback((param: keyof PSOParams, value: number | boolean) => {
+    setPsoParams((prev: PSOParams) => ({ ...prev, [param]: value as never }));
   }, []);
 
   const handleStartSimulation = useCallback(() => {
@@ -130,7 +149,9 @@ function App() {
       ? new Worker(new URL('./workers/saWorker.ts', import.meta.url), { type: 'module' })
       : algorithm === 'tabu'
         ? new Worker(new URL('./workers/tabuWorker.ts', import.meta.url), { type: 'module' })
-        : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+        : algorithm === 'pso'
+          ? new Worker(new URL('./workers/psoWorker.ts', import.meta.url), { type: 'module' })
+          : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
 
     workerRef.current = worker;
 
@@ -198,9 +219,9 @@ function App() {
       type: 'start',
       startCity,
       endCity,
-      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : gaParams,
+      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : gaParams,
     });
-  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, simTimeSeconds]);
+  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, simTimeSeconds]);
 
   const handleStopSimulation = useCallback(() => {
     if (workerRef.current) {
@@ -343,6 +364,8 @@ function App() {
           onSaParamChange={handleSaParamChange}
           tabuParams={tabuParams}
           onTabuParamChange={handleTabuParamChange}
+          psoParams={psoParams}
+          onPsoParamChange={handlePsoParamChange}
           isRunning={isRunning}
           currentGeneration={results.generation}
           currentTemperature={results.temperature}

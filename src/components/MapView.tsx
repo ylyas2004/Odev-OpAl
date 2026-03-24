@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { CITIES, getCityById } from '../data/turkeyGraph';
+import { CITIES } from '../data/turkeyGraph';
 import routeGeometries from '../data/routeGeometries_v2.json';
 import turkeyBoundary from '../data/turkeyBoundary.json';
 
@@ -45,13 +45,9 @@ const MapView: React.FC<MapViewProps> = ({
                     leafletCoords.reverse();
                 }
                 fullGeometry.push(...leafletCoords);
-            } else {
-                const fromCoords = getCityById(fromCity);
-                const toCoords = getCityById(toCity);
-                if (fromCoords && toCoords) {
-                    fullGeometry.push([fromCoords.lat, fromCoords.lng], [toCoords.lat, toCoords.lng]);
-                }
             }
+            // No fallback: if road geometry is missing, skip this segment entirely.
+            // Drawing a straight line would be misleading (roads don't work that way).
         }
         return fullGeometry;
     };
@@ -84,23 +80,13 @@ const MapView: React.FC<MapViewProps> = ({
                 if (coords) {
                     // Coordinates in JSON are [lon, lat], convert to [lat, lon] for Leaflet
                     const leafletCoords = coords.map(c => [c[1], c[0]] as [number, number]);
-
-                    // If we matched the reversed key (k2), the geometry coordinates are likely backward
-                    // We need the road in the direction from->to
-                    // For simply drawing a polyline, direction doesn't visually matter much, but for connectedness:
                     if (geometries[k2] && !geometries[k1]) {
                         leafletCoords.reverse();
                     }
-
                     fullGeometry.push(...leafletCoords);
-                } else {
-                    // Fallback to straight line if geometry not found
-                    const fromCoords = getCityById(fromCity);
-                    const toCoords = getCityById(toCity);
-                    if (fromCoords && toCoords) {
-                        fullGeometry.push([fromCoords.lat, fromCoords.lng], [toCoords.lat, toCoords.lng]);
-                    }
                 }
+                // No fallback: if road geometry is missing, skip this segment entirely.
+                // Drawing a straight line would be misleading (roads don't work that way).
             }
 
             setDetailedBestCoords(fullGeometry.length > 0 ? fullGeometry : null);

@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import type { GAParams } from '../utils/geneticAlgorithm';
 import type { SAParams } from '../utils/simulatedAnnealing';
 import type { TabuParams } from '../utils/tabuSearch';
+import type { PSOParams } from '../utils/particleSwarm';
 
 interface RightPanelProps {
-    algorithm: 'ga' | 'sa' | 'tabu';
-    onAlgorithmChange: (algo: 'ga' | 'sa' | 'tabu') => void;
+    algorithm: 'ga' | 'sa' | 'tabu' | 'pso';
+    onAlgorithmChange: (algo: 'ga' | 'sa' | 'tabu' | 'pso') => void;
     gaParams: GAParams;
     onGaParamChange: (param: keyof GAParams, value: number) => void;
     saParams: SAParams;
     onSaParamChange: (param: keyof SAParams, value: number | string) => void;
     tabuParams: TabuParams;
     onTabuParamChange: (param: keyof TabuParams, value: number) => void;
+    psoParams: PSOParams;
+    onPsoParamChange: (param: keyof PSOParams, value: number | boolean) => void;
     isRunning: boolean;
     currentGeneration?: number;
     currentTemperature?: number;
@@ -145,7 +148,7 @@ function CoolingGraph({ params, isRunning, currentStep, currentTemp }: { params:
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({
-    algorithm, onAlgorithmChange, gaParams, onGaParamChange, saParams, onSaParamChange, tabuParams, onTabuParamChange, isRunning, currentGeneration, currentTemperature
+    algorithm, onAlgorithmChange, gaParams, onGaParamChange, saParams, onSaParamChange, tabuParams, onTabuParamChange, psoParams, onPsoParamChange, isRunning, currentGeneration, currentTemperature
 }) => {
     const [showParams, setShowParams] = useState(true);
     const [panelWidth, setPanelWidth] = useState(340);
@@ -187,10 +190,11 @@ const RightPanel: React.FC<RightPanelProps> = ({
             />
             <div className="panel-header">
                 <div className="panel-title-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <select className="algo-select" value={algorithm} onChange={e => onAlgorithmChange(e.target.value as 'ga' | 'sa' | 'tabu')} disabled={isRunning}>
+                    <select className="algo-select" value={algorithm} onChange={e => onAlgorithmChange(e.target.value as 'ga' | 'sa' | 'tabu' | 'pso')} disabled={isRunning}>
                         <option value="ga">Genetik Algoritma</option>
                         <option value="sa">Benzetimli Tavlama</option>
                         <option value="tabu">Tabu Arama</option>
+                        <option value="pso">Parçacık Sürüsü (PSO)</option>
                     </select>
                 </div>
             </div>
@@ -379,6 +383,114 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 onChange={v => onTabuParamChange('maxNoImprove', v)}
                                 disabled={isRunning}
                             />
+                        </div>
+                    )}
+                    {showParams && algorithm === 'pso' && (
+                        <div className="params-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ParamSlider
+                                label="Sürü Büyüklüğü (N)"
+                                value={psoParams.swarmSize}
+                                min={10} max={150} step={5}
+                                description="Arama yapan parçacık (çözüm adayı) sayısı. Büyük = geniş arama."
+                                onChange={v => onPsoParamChange('swarmSize', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İterasyon"
+                                value={psoParams.maxIterations}
+                                min={50} max={2000} step={50}
+                                description="Sürünün toplam hareket adımı limiti."
+                                onChange={v => onPsoParamChange('maxIterations', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Atalet Katsayısı (w)"
+                                value={psoParams.inertiaWeight}
+                                min={0.1} max={1.0} step={0.05}
+                                description="Önceki hızın ne kadarı korunur. Yüksek = keşif, Düşük = sömürü."
+                                onChange={v => onPsoParamChange('inertiaWeight', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Bilişsel Kat. (c1)"
+                                value={psoParams.cognitiveCoeff}
+                                min={0.5} max={3.0} step={0.1}
+                                description="Parçacığın kendi en iyi çözümüne çekilme gücü (kişisel bellek)."
+                                onChange={v => onPsoParamChange('cognitiveCoeff', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Sosyal Kat. (c2)"
+                                value={psoParams.socialCoeff}
+                                min={0.5} max={3.0} step={0.1}
+                                description="Parçacığın sürünün en iyi çözümüne çekilme gücü (sosyal bellek)."
+                                onChange={v => onPsoParamChange('socialCoeff', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. Takas/İter."
+                                value={psoParams.maxSwapsPerIter}
+                                min={1} max={15} step={1}
+                                description="Hız vektörünün boyutu. Düşük = küçük adımlar, Yüksek = büyük sıçramalar."
+                                onChange={v => onPsoParamChange('maxSwapsPerIter', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Mutasyon Oranı"
+                                value={psoParams.mutationRate}
+                                min={0.0} max={0.5} step={0.01}
+                                description="Rastgele keşif için iki ara şehri takas etme olasılığı."
+                                onChange={v => onPsoParamChange('mutationRate', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İyileşmesizlik"
+                                value={psoParams.maxNoImprove}
+                                min={10} max={500} step={10}
+                                description="Bu kadar iterasyonda global en iyi iyileşmezse erken dur."
+                                onChange={v => onPsoParamChange('maxNoImprove', v)}
+                                disabled={isRunning}
+                            />
+                            {/* lBest Topoloji Switcher */}
+                            <div className="param-group">
+                                <div className="param-header">
+                                    <span className="param-label">V-Sürü Topolojisi (lBest)</span>
+                                    <span className="param-value">{psoParams.useLocalBest ? 'Açık' : 'Kapalı'}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                                    <button
+                                        onClick={() => onPsoParamChange('useLocalBest', false)}
+                                        disabled={isRunning}
+                                        style={{
+                                            flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px',
+                                            background: !psoParams.useLocalBest ? 'var(--accent-primary, #4f8ef7)' : 'rgba(255,255,255,0.08)',
+                                            color: !psoParams.useLocalBest ? '#fff' : 'rgba(255,255,255,0.5)',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >Küresel (gBest)</button>
+                                    <button
+                                        onClick={() => onPsoParamChange('useLocalBest', true)}
+                                        disabled={isRunning}
+                                        style={{
+                                            flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px',
+                                            background: psoParams.useLocalBest ? 'var(--accent-primary, #4f8ef7)' : 'rgba(255,255,255,0.08)',
+                                            color: psoParams.useLocalBest ? '#fff' : 'rgba(255,255,255,0.5)',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >Yerel (lBest)</button>
+                                </div>
+                                <span className="param-desc" style={{ marginTop: '4px' }}>lBest: Her parçacık sadece komşularını gören V-şekilli sürü formasyonu kullanır.</span>
+                            </div>
+                            {psoParams.useLocalBest && (
+                                <ParamSlider
+                                    label="Komşuluk Yarıçapı"
+                                    value={psoParams.neighborhoodSize}
+                                    min={1} max={10} step={1}
+                                    description="lBest topolojisinde her parçacığın gördüğü komşu pencere büyüklüğü."
+                                    onChange={v => onPsoParamChange('neighborhoodSize', v)}
+                                    disabled={isRunning}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
