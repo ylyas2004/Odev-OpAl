@@ -3,10 +3,11 @@ import type { GAParams } from '../utils/geneticAlgorithm';
 import type { SAParams } from '../utils/simulatedAnnealing';
 import type { TabuParams } from '../utils/tabuSearch';
 import type { PSOParams } from '../utils/particleSwarm';
+import type { ACOParams } from '../utils/antColony';
 
 interface RightPanelProps {
-    algorithm: 'ga' | 'sa' | 'tabu' | 'pso';
-    onAlgorithmChange: (algo: 'ga' | 'sa' | 'tabu' | 'pso') => void;
+    algorithm: 'ga' | 'sa' | 'tabu' | 'pso' | 'aco';
+    onAlgorithmChange: (algo: 'ga' | 'sa' | 'tabu' | 'pso' | 'aco') => void;
     gaParams: GAParams;
     onGaParamChange: (param: keyof GAParams, value: number) => void;
     saParams: SAParams;
@@ -15,6 +16,8 @@ interface RightPanelProps {
     onTabuParamChange: (param: keyof TabuParams, value: number) => void;
     psoParams: PSOParams;
     onPsoParamChange: (param: keyof PSOParams, value: number | boolean) => void;
+    acoParams: ACOParams;
+    onAcoParamChange: (param: keyof ACOParams, value: number) => void;
     isRunning: boolean;
     currentGeneration?: number;
     currentTemperature?: number;
@@ -148,7 +151,7 @@ function CoolingGraph({ params, isRunning, currentStep, currentTemp }: { params:
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({
-    algorithm, onAlgorithmChange, gaParams, onGaParamChange, saParams, onSaParamChange, tabuParams, onTabuParamChange, psoParams, onPsoParamChange, isRunning, currentGeneration, currentTemperature
+    algorithm, onAlgorithmChange, gaParams, onGaParamChange, saParams, onSaParamChange, tabuParams, onTabuParamChange, psoParams, onPsoParamChange, acoParams, onAcoParamChange, isRunning, currentGeneration, currentTemperature
 }) => {
     const [showParams, setShowParams] = useState(true);
     const [panelWidth, setPanelWidth] = useState(340);
@@ -190,11 +193,12 @@ const RightPanel: React.FC<RightPanelProps> = ({
             />
             <div className="panel-header">
                 <div className="panel-title-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <select className="algo-select" value={algorithm} onChange={e => onAlgorithmChange(e.target.value as 'ga' | 'sa' | 'tabu' | 'pso')} disabled={isRunning}>
+                    <select className="algo-select" value={algorithm} onChange={e => onAlgorithmChange(e.target.value as 'ga' | 'sa' | 'tabu' | 'pso' | 'aco')} disabled={isRunning}>
                         <option value="ga">Genetik Algoritma</option>
                         <option value="sa">Benzetimli Tavlama</option>
                         <option value="tabu">Tabu Arama</option>
                         <option value="pso">Parçacık Sürüsü (PSO)</option>
+                        <option value="aco">Karınca Kolonisi (ACO)</option>
                     </select>
                 </div>
             </div>
@@ -491,6 +495,74 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                     disabled={isRunning}
                                 />
                             )}
+                        </div>
+                    )}
+                    {showParams && algorithm === 'aco' && (
+                        <div className="params-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ParamSlider
+                                label="Karınca Sayısı"
+                                value={acoParams.antCount}
+                                min={5} max={100} step={5}
+                                description="Her iterasyonda tur oluşturan karınca sayısı. Fazla = geniş arama."
+                                onChange={v => onAcoParamChange('antCount', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İterasyon"
+                                value={acoParams.maxIterations}
+                                min={50} max={1000} step={50}
+                                description="Toplam koloni döngüsü limiti."
+                                onChange={v => onAcoParamChange('maxIterations', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Feromon Etkisi (α)"
+                                value={acoParams.alpha}
+                                min={0.1} max={5.0} step={0.1}
+                                description="Yüksek α → karıncalar önceki feromon izlerine daha çok uyar."
+                                onChange={v => onAcoParamChange('alpha', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Sezgisel Etki (β)"
+                                value={acoParams.beta}
+                                min={0.1} max={8.0} step={0.1}
+                                description="Yüksek β → karıncalar kısa kenarları daha çok tercih eder."
+                                onChange={v => onAcoParamChange('beta', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Buharlaşma Oranı (ρ)"
+                                value={acoParams.evaporationRate}
+                                min={0.01} max={0.99} step={0.01}
+                                description="Her iterasyonda feromondaki azalma oranı. Yüksek = hızlı unutma."
+                                onChange={v => onAcoParamChange('evaporationRate', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Feromon Sabiti (Q)"
+                                value={acoParams.Q}
+                                min={10} max={500} step={10}
+                                description="Karıncanın bıraktığı feromon miktarı (Q / tur mesafesi formülü)."
+                                onChange={v => onAcoParamChange('Q', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Başlangıç Feromon"
+                                value={acoParams.initialPheromone}
+                                min={0.1} max={5.0} step={0.1}
+                                description="Tüm kenarlarda başlangıçta eşit dağıtılan feromon seviyesi."
+                                onChange={v => onAcoParamChange('initialPheromone', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İyileşmesizlik"
+                                value={acoParams.maxNoImprove}
+                                min={10} max={300} step={10}
+                                description="Bu kadar iterasyon iyileşme olmazsa erken dur."
+                                onChange={v => onAcoParamChange('maxNoImprove', v)}
+                                disabled={isRunning}
+                            />
                         </div>
                     )}
                 </div>
