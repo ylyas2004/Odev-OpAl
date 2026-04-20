@@ -7,6 +7,7 @@ import type { SAParams } from './utils/simulatedAnnealing';
 import type { TabuParams } from './utils/tabuSearch';
 import type { PSOParams } from './utils/particleSwarm';
 import type { ACOParams } from './utils/antColony';
+import type { ABCParams } from './utils/beeColony';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -57,6 +58,13 @@ const DEFAULT_ACO_PARAMS: ACOParams = {
   Q: 100,
   initialPheromone: 1.0,
   maxNoImprove: 80,
+};
+
+const DEFAULT_ABC_PARAMS: ABCParams = {
+  beeCount: 40,
+  maxIterations: 500,
+  limit: 20,
+  maxNoImprove: 100,
 };
 
 interface ResultState {
@@ -112,12 +120,13 @@ function CitySelect({
 function App() {
   const [startCity, setStartCity] = useState<string | null>(null);
   const [endCity, setEndCity] = useState<string | null>(null);
-  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso' | 'aco'>('ga');
+  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc'>('ga');
   const [gaParams, setGaParams] = useState<GAParams>(DEFAULT_PARAMS);
   const [saParams, setSaParams] = useState<SAParams>(DEFAULT_SA_PARAMS);
   const [tabuParams, setTabuParams] = useState<TabuParams>(DEFAULT_TABU_PARAMS);
   const [psoParams, setPsoParams] = useState<PSOParams>(DEFAULT_PSO_PARAMS);
   const [acoParams, setAcoParams] = useState<ACOParams>(DEFAULT_ACO_PARAMS);
+  const [abcParams, setAbcParams] = useState<ABCParams>(DEFAULT_ABC_PARAMS);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ResultState>(INITIAL_RESULTS);
   const [trialPath, setTrialPath] = useState<string[]>([]);
@@ -146,6 +155,10 @@ function App() {
     setAcoParams((prev: ACOParams) => ({ ...prev, [param]: value }));
   }, []);
 
+  const handleAbcParamChange = useCallback((param: keyof ABCParams, value: number) => {
+    setAbcParams((prev: ABCParams) => ({ ...prev, [param]: value }));
+  }, []);
+
   const handleStartSimulation = useCallback(() => {
     if (!startCity || !endCity) return;
 
@@ -170,7 +183,9 @@ function App() {
           ? new Worker(new URL('./workers/psoWorker.ts', import.meta.url), { type: 'module' })
           : algorithm === 'aco'
             ? new Worker(new URL('./workers/acoWorker.ts', import.meta.url), { type: 'module' })
-            : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+            : algorithm === 'abc'
+              ? new Worker(new URL('./workers/abcWorker.ts', import.meta.url), { type: 'module' })
+              : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
 
     workerRef.current = worker;
 
@@ -229,7 +244,7 @@ function App() {
     };
 
     worker.onerror = (err) => {
-      console.error('GA Worker error:', err);
+      console.error('Worker error:', err);
       setIsRunning(false);
       setResults(prev => ({ ...prev, status: 'idle' }));
     };
@@ -238,9 +253,9 @@ function App() {
       type: 'start',
       startCity,
       endCity,
-      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : algorithm === 'aco' ? acoParams : gaParams,
+      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : algorithm === 'aco' ? acoParams : algorithm === 'abc' ? abcParams : gaParams,
     });
-  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, acoParams, simTimeSeconds]);
+  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, acoParams, abcParams, simTimeSeconds]);
 
   const handleStopSimulation = useCallback(() => {
     if (workerRef.current) {
@@ -387,6 +402,8 @@ function App() {
           onPsoParamChange={handlePsoParamChange}
           acoParams={acoParams}
           onAcoParamChange={handleAcoParamChange}
+          abcParams={abcParams}
+          onAbcParamChange={handleAbcParamChange}
           isRunning={isRunning}
           currentGeneration={results.generation}
           currentTemperature={results.temperature}
