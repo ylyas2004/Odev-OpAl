@@ -6,10 +6,12 @@ import type { PSOParams } from '../utils/particleSwarm';
 import type { ACOParams } from '../utils/antColony';
 
 import type { ABCParams } from '../utils/beeColony';
+import type { BOAParams } from '../utils/butterflyOptimization';
+import type { FAParams } from '../utils/fireflyAlgorithm';
 
 interface RightPanelProps {
-    algorithm: 'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc';
-    onAlgorithmChange: (algo: 'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc') => void;
+    algorithm: 'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc' | 'boa' | 'fa';
+    onAlgorithmChange: (algo: 'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc' | 'boa' | 'fa') => void;
     gaParams: GAParams;
     onGaParamChange: (param: keyof GAParams, value: number) => void;
     saParams: SAParams;
@@ -22,6 +24,10 @@ interface RightPanelProps {
     onAcoParamChange: (param: keyof ACOParams, value: number) => void;
     abcParams: ABCParams;
     onAbcParamChange: (param: keyof ABCParams, value: number) => void;
+    boaParams: BOAParams;
+    onBoaParamChange: (param: keyof BOAParams, value: number) => void;
+    faParams: FAParams;
+    onFaParamChange: (param: keyof FAParams, value: number) => void;
     isRunning: boolean;
     currentGeneration?: number;
     currentTemperature?: number;
@@ -155,7 +161,7 @@ function CoolingGraph({ params, isRunning, currentStep, currentTemp }: { params:
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({
-    algorithm, onAlgorithmChange, gaParams, onGaParamChange, saParams, onSaParamChange, tabuParams, onTabuParamChange, psoParams, onPsoParamChange, acoParams, onAcoParamChange, abcParams, onAbcParamChange, isRunning, currentGeneration, currentTemperature
+    algorithm, onAlgorithmChange, gaParams, onGaParamChange, saParams, onSaParamChange, tabuParams, onTabuParamChange, psoParams, onPsoParamChange, acoParams, onAcoParamChange, abcParams, onAbcParamChange, boaParams, onBoaParamChange, faParams, onFaParamChange, isRunning, currentGeneration, currentTemperature
 }) => {
     const [showParams, setShowParams] = useState(true);
     const [panelWidth, setPanelWidth] = useState(340);
@@ -197,13 +203,15 @@ const RightPanel: React.FC<RightPanelProps> = ({
             />
             <div className="panel-header">
                 <div className="panel-title-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <select className="algo-select" value={algorithm} onChange={e => onAlgorithmChange(e.target.value as 'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc')} disabled={isRunning}>
+                    <select className="algo-select" value={algorithm} onChange={e => onAlgorithmChange(e.target.value as 'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc' | 'boa' | 'fa')} disabled={isRunning}>
                         <option value="ga">Genetik Algoritma</option>
                         <option value="sa">Benzetimli Tavlama</option>
                         <option value="tabu">Tabu Arama</option>
                         <option value="pso">Parçacık Sürüsü (PSO)</option>
                         <option value="aco">Karınca Kolonisi (ACO)</option>
                         <option value="abc">Yapay Arı Kolonisi (ABC)</option>
+                        <option value="boa">Kelebek Optimizasyonu (BOA)</option>
+                        <option value="fa">Ateşböceği Algoritması (FA)</option>
                     </select>
                 </div>
             </div>
@@ -602,6 +610,110 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 min={10} max={500} step={10}
                                 description="Global en iyi bu kadar iterasyon değişmezse erken dur."
                                 onChange={v => onAbcParamChange('maxNoImprove', v)}
+                                disabled={isRunning}
+                            />
+                        </div>
+                    )}
+                    {showParams && algorithm === 'boa' && (
+                        <div className="params-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ParamSlider
+                                label="Kelebek Sayısı (N)"
+                                value={boaParams.butterflyCount}
+                                min={10} max={200} step={10}
+                                description="Sürüdeki toplam kelebek sayısı. Fazla = geniş arama alanı."
+                                onChange={v => onBoaParamChange('butterflyCount', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İterasyon"
+                                value={boaParams.maxIterations}
+                                min={50} max={2000} step={50}
+                                description="Algoritmanın toplam döngü limiti."
+                                onChange={v => onBoaParamChange('maxIterations', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Koku Katsayısı (c)"
+                                value={boaParams.c}
+                                min={0.01} max={1.0} step={0.01}
+                                description="Sensör modülü koku algı katsayısı. Algoritma ilerledikçe artar."
+                                onChange={v => onBoaParamChange('c', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Kuvvet Üssü (a)"
+                                value={boaParams.a}
+                                min={0.1} max={0.9} step={0.1}
+                                description="Kokunun yayılma derecesini belirler."
+                                onChange={v => onBoaParamChange('a', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Geçiş Olasılığı (p)"
+                                value={boaParams.p}
+                                min={0.1} max={0.9} step={0.1}
+                                description="Küresel (Global) ve Yerel (Local) arama arasındaki geçiş olasılığı."
+                                onChange={v => onBoaParamChange('p', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İyileşmesizlik"
+                                value={boaParams.maxNoImprove}
+                                min={10} max={500} step={10}
+                                description="Global en iyi bu kadar iterasyon değişmezse erken dur."
+                                onChange={v => onBoaParamChange('maxNoImprove', v)}
+                                disabled={isRunning}
+                            />
+                        </div>
+                    )}
+                    {showParams && algorithm === 'fa' && (
+                        <div className="params-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ParamSlider
+                                label="Ateşböceği Sayısı"
+                                value={faParams.fireflyCount}
+                                min={10} max={200} step={10}
+                                description="Kolonideki toplam ateşböceği sayısı. Büyük = daha iyi araştırma."
+                                onChange={v => onFaParamChange('fireflyCount', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İterasyon"
+                                value={faParams.maxIterations}
+                                min={50} max={2000} step={50}
+                                description="Simülasyonun dış döngü limiti."
+                                onChange={v => onFaParamChange('maxIterations', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Rastgelelik (α)"
+                                value={faParams.alpha}
+                                min={0.0} max={1.0} step={0.05}
+                                description="Ateşböceklerinin hareketine eklenen rastgele adım büyüklüğü."
+                                onChange={v => onFaParamChange('alpha', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Temel Çekicilik (β₀)"
+                                value={faParams.beta0}
+                                min={0.1} max={5.0} step={0.1}
+                                description="Uzaklık sıfırken maksimum çekim gücü. Yüksek = daha hızlı yakınsama."
+                                onChange={v => onFaParamChange('beta0', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Işık Emilimi (γ)"
+                                value={faParams.gamma}
+                                min={0.01} max={2.0} step={0.01}
+                                description="Mesafeyle ışığın ne kadar azalacağı. Yüksek = sadece yakındakini görür."
+                                onChange={v => onFaParamChange('gamma', v)}
+                                disabled={isRunning}
+                            />
+                            <ParamSlider
+                                label="Maks. İyileşmesizlik"
+                                value={faParams.maxNoImprove}
+                                min={10} max={500} step={10}
+                                description="Global en iyi bu kadar iterasyon değişmezse erken dur."
+                                onChange={v => onFaParamChange('maxNoImprove', v)}
                                 disabled={isRunning}
                             />
                         </div>

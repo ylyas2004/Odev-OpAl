@@ -8,6 +8,8 @@ import type { TabuParams } from './utils/tabuSearch';
 import type { PSOParams } from './utils/particleSwarm';
 import type { ACOParams } from './utils/antColony';
 import type { ABCParams } from './utils/beeColony';
+import type { BOAParams } from './utils/butterflyOptimization';
+import type { FAParams } from './utils/fireflyAlgorithm';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -67,6 +69,24 @@ const DEFAULT_ABC_PARAMS: ABCParams = {
   maxNoImprove: 100,
 };
 
+const DEFAULT_BOA_PARAMS: BOAParams = {
+  butterflyCount: 40,
+  maxIterations: 500,
+  c: 0.01,
+  a: 0.1,
+  p: 0.8,
+  maxNoImprove: 100,
+};
+
+const DEFAULT_FA_PARAMS: FAParams = {
+  fireflyCount: 40,
+  maxIterations: 500,
+  alpha: 0.5,
+  beta0: 1.0,
+  gamma: 0.1,
+  maxNoImprove: 100,
+};
+
 interface ResultState {
   generation: number;
   temperature?: number;
@@ -120,13 +140,15 @@ function CitySelect({
 function App() {
   const [startCity, setStartCity] = useState<string | null>(null);
   const [endCity, setEndCity] = useState<string | null>(null);
-  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc'>('ga');
+  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc' | 'boa' | 'fa'>('ga');
   const [gaParams, setGaParams] = useState<GAParams>(DEFAULT_PARAMS);
   const [saParams, setSaParams] = useState<SAParams>(DEFAULT_SA_PARAMS);
   const [tabuParams, setTabuParams] = useState<TabuParams>(DEFAULT_TABU_PARAMS);
   const [psoParams, setPsoParams] = useState<PSOParams>(DEFAULT_PSO_PARAMS);
   const [acoParams, setAcoParams] = useState<ACOParams>(DEFAULT_ACO_PARAMS);
   const [abcParams, setAbcParams] = useState<ABCParams>(DEFAULT_ABC_PARAMS);
+  const [boaParams, setBoaParams] = useState<BOAParams>(DEFAULT_BOA_PARAMS);
+  const [faParams, setFaParams] = useState<FAParams>(DEFAULT_FA_PARAMS);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ResultState>(INITIAL_RESULTS);
   const [trialPath, setTrialPath] = useState<string[]>([]);
@@ -159,6 +181,14 @@ function App() {
     setAbcParams((prev: ABCParams) => ({ ...prev, [param]: value }));
   }, []);
 
+  const handleBoaParamChange = useCallback((param: keyof BOAParams, value: number) => {
+    setBoaParams((prev: BOAParams) => ({ ...prev, [param]: value }));
+  }, []);
+
+  const handleFaParamChange = useCallback((param: keyof FAParams, value: number) => {
+    setFaParams((prev: FAParams) => ({ ...prev, [param]: value }));
+  }, []);
+
   const handleStartSimulation = useCallback(() => {
     if (!startCity || !endCity) return;
 
@@ -181,11 +211,15 @@ function App() {
         ? new Worker(new URL('./workers/tabuWorker.ts', import.meta.url), { type: 'module' })
         : algorithm === 'pso'
           ? new Worker(new URL('./workers/psoWorker.ts', import.meta.url), { type: 'module' })
-          : algorithm === 'aco'
-            ? new Worker(new URL('./workers/acoWorker.ts', import.meta.url), { type: 'module' })
-            : algorithm === 'abc'
-              ? new Worker(new URL('./workers/abcWorker.ts', import.meta.url), { type: 'module' })
-              : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+            : algorithm === 'aco'
+              ? new Worker(new URL('./workers/acoWorker.ts', import.meta.url), { type: 'module' })
+              : algorithm === 'abc'
+                ? new Worker(new URL('./workers/abcWorker.ts', import.meta.url), { type: 'module' })
+                : algorithm === 'boa'
+                  ? new Worker(new URL('./workers/boaWorker.ts', import.meta.url), { type: 'module' })
+                  : algorithm === 'fa'
+                    ? new Worker(new URL('./workers/faWorker.ts', import.meta.url), { type: 'module' })
+                    : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
 
     workerRef.current = worker;
 
@@ -253,9 +287,9 @@ function App() {
       type: 'start',
       startCity,
       endCity,
-      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : algorithm === 'aco' ? acoParams : algorithm === 'abc' ? abcParams : gaParams,
+      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : algorithm === 'aco' ? acoParams : algorithm === 'abc' ? abcParams : algorithm === 'boa' ? boaParams : algorithm === 'fa' ? faParams : gaParams,
     });
-  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, acoParams, abcParams, simTimeSeconds]);
+  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, acoParams, abcParams, boaParams, faParams, simTimeSeconds]);
 
   const handleStopSimulation = useCallback(() => {
     if (workerRef.current) {
@@ -404,6 +438,10 @@ function App() {
           onAcoParamChange={handleAcoParamChange}
           abcParams={abcParams}
           onAbcParamChange={handleAbcParamChange}
+          boaParams={boaParams}
+          onBoaParamChange={handleBoaParamChange}
+          faParams={faParams}
+          onFaParamChange={handleFaParamChange}
           isRunning={isRunning}
           currentGeneration={results.generation}
           currentTemperature={results.temperature}
