@@ -10,6 +10,7 @@ import type { ACOParams } from './utils/antColony';
 import type { ABCParams } from './utils/beeColony';
 import type { BOAParams } from './utils/butterflyOptimization';
 import type { FAParams } from './utils/fireflyAlgorithm';
+import type { GWParams } from './utils/greyWolf';
 import './App.css';
 
 const DEFAULT_PARAMS: GAParams = {
@@ -87,6 +88,12 @@ const DEFAULT_FA_PARAMS: FAParams = {
   maxNoImprove: 100,
 };
 
+const DEFAULT_GW_PARAMS: GWParams = {
+  packSize: 20,
+  maxIterations: 400,
+  maxNoImprove: 80,
+};
+
 interface ResultState {
   generation: number;
   temperature?: number;
@@ -140,7 +147,7 @@ function CitySelect({
 function App() {
   const [startCity, setStartCity] = useState<string | null>(null);
   const [endCity, setEndCity] = useState<string | null>(null);
-  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc' | 'boa' | 'fa'>('ga');
+  const [algorithm, setAlgorithm] = useState<'ga' | 'sa' | 'tabu' | 'pso' | 'aco' | 'abc' | 'boa' | 'fa' | 'gw'>('ga');
   const [gaParams, setGaParams] = useState<GAParams>(DEFAULT_PARAMS);
   const [saParams, setSaParams] = useState<SAParams>(DEFAULT_SA_PARAMS);
   const [tabuParams, setTabuParams] = useState<TabuParams>(DEFAULT_TABU_PARAMS);
@@ -149,6 +156,7 @@ function App() {
   const [abcParams, setAbcParams] = useState<ABCParams>(DEFAULT_ABC_PARAMS);
   const [boaParams, setBoaParams] = useState<BOAParams>(DEFAULT_BOA_PARAMS);
   const [faParams, setFaParams] = useState<FAParams>(DEFAULT_FA_PARAMS);
+  const [gwParams, setGwParams] = useState<GWParams>(DEFAULT_GW_PARAMS);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<ResultState>(INITIAL_RESULTS);
   const [trialPath, setTrialPath] = useState<string[]>([]);
@@ -189,6 +197,10 @@ function App() {
     setFaParams((prev: FAParams) => ({ ...prev, [param]: value }));
   }, []);
 
+  const handleGwParamChange = useCallback((param: keyof GWParams, value: number) => {
+    setGwParams((prev: GWParams) => ({ ...prev, [param]: value }));
+  }, []);
+
   const handleStartSimulation = useCallback(() => {
     if (!startCity || !endCity) return;
 
@@ -219,7 +231,9 @@ function App() {
                   ? new Worker(new URL('./workers/boaWorker.ts', import.meta.url), { type: 'module' })
                   : algorithm === 'fa'
                     ? new Worker(new URL('./workers/faWorker.ts', import.meta.url), { type: 'module' })
-                    : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
+                    : algorithm === 'gw'
+                      ? new Worker(new URL('./workers/greyWolfWorker.ts', import.meta.url), { type: 'module' })
+                      : new Worker(new URL('./workers/gaWorker.ts', import.meta.url), { type: 'module' });
 
     workerRef.current = worker;
 
@@ -287,9 +301,9 @@ function App() {
       type: 'start',
       startCity,
       endCity,
-      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : algorithm === 'aco' ? acoParams : algorithm === 'abc' ? abcParams : algorithm === 'boa' ? boaParams : algorithm === 'fa' ? faParams : gaParams,
+      params: algorithm === 'sa' ? saParams : algorithm === 'tabu' ? tabuParams : algorithm === 'pso' ? psoParams : algorithm === 'aco' ? acoParams : algorithm === 'abc' ? abcParams : algorithm === 'boa' ? boaParams : algorithm === 'fa' ? faParams : algorithm === 'gw' ? gwParams : gaParams,
     });
-  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, acoParams, abcParams, boaParams, faParams, simTimeSeconds]);
+  }, [startCity, endCity, algorithm, gaParams, saParams, tabuParams, psoParams, acoParams, abcParams, boaParams, faParams, gwParams, simTimeSeconds]);
 
   const handleStopSimulation = useCallback(() => {
     if (workerRef.current) {
@@ -442,6 +456,8 @@ function App() {
           onBoaParamChange={handleBoaParamChange}
           faParams={faParams}
           onFaParamChange={handleFaParamChange}
+          gwParams={gwParams}
+          onGwParamChange={handleGwParamChange}
           isRunning={isRunning}
           currentGeneration={results.generation}
           currentTemperature={results.temperature}
